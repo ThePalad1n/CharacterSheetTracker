@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Joe — Character Sheet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="identity">
+    <input class="name-input" id="charName" data-path="meta.name" placeholder="Character name" />
+    <div class="subline" id="subline"></div>
+  </div>
+
+  <div class="vitals">
+    <div class="vital-box" data-detail="hp">
+      <div class="vital-label">HP</div>
+      <div class="vital-value">
+        <input id="hpCurrent" data-path="combat.hpCurrent" class="num-input hp-current" type="number" placeholder="cur" />
+        <span>/</span>
+        <input id="hpMax" data-path="combat.hpMax" class="num-input hp-max" type="number" placeholder="max" />
+      </div>
+    </div>
+    <div class="vital-box" data-detail="ac">
+      <div class="vital-label">AC</div>
+      <input id="ac" data-path="combat.armorClass" class="num-input vital-value" type="number" />
+    </div>
+    <div class="vital-box" data-detail="init">
+      <div class="vital-label">Init</div>
+      <div class="vital-value" id="initDisplay"></div>
+    </div>
+    <div class="vital-box" data-detail="speed">
+      <div class="vital-label">Speed</div>
+      <input id="speed" data-path="combat.speed" class="num-input vital-value" type="number" />
+    </div>
+    <div class="vital-box" data-detail="insp">
+      <div class="vital-label">Inspiration</div>
+      <input id="inspiration" data-path="inspiration" class="num-input vital-value" type="number" />
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab-btn active" data-tab="overview">Overview</button>
+  <button class="tab-btn" data-tab="combat">Combat</button>
+  <button class="tab-btn" data-tab="spells">Spells</button>
+  <button class="tab-btn" data-tab="inventory">Inventory</button>
+  <button class="tab-btn" data-tab="features">Features</button>
+  <button class="tab-btn" data-tab="background">Background</button>
+</nav>
+
+<main id="tabContent"></main>
+
+<footer class="app-footer">
+  <button id="exportBtn" class="ghost-btn">Export backup (.json)</button>
+  <label class="ghost-btn file-label">
+    Import backup
+    <input type="file" id="importInput" accept="application/json" hidden />
+  </label>
+  <button id="resetBtn" class="ghost-btn danger">Reset to paper sheet</button>
+  <span class="save-indicator" id="saveIndicator"></span>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
