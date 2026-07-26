@@ -125,12 +125,12 @@ function renderOverview() {
   const passivePerception = 10 + abilityMod(a.wis) + state.skills.perception.prof * state.proficiencyBonus;
 
   const classesRows = state.classes.map((c, i) => `
-    <div class="field-row two-col" style="flex-direction:row;align-items:flex-end;">
-      <div style="flex:2">
+    <div class="row-wrap">
+      <div class="field-row" style="flex-basis:160px;">
         <label>Class</label>
         <input data-path="classes.${i}.name" value="${esc(c.name)}" />
       </div>
-      <div style="flex:1">
+      <div class="field-row" style="flex-basis:70px;flex-grow:0;">
         <label>Level</label>
         <input type="number" data-path="classes.${i}.level" data-computed-group="classes" value="${esc(c.level)}" />
       </div>
@@ -185,10 +185,10 @@ function renderOverview() {
 
 function renderCombat() {
   const hitDiceRows = state.combat.hitDice.map((hd, i) => `
-    <div class="field-row two-col" style="flex-direction:row;align-items:flex-end;">
-      <div><label>Die</label><input data-path="combat.hitDice.${i}.die" value="${esc(hd.die)}" /></div>
-      <div><label>Class</label><input data-path="combat.hitDice.${i}.class" value="${esc(hd.class)}" /></div>
-      <div><label>Used</label><input type="number" data-path="combat.hitDice.${i}.used" value="${esc(hd.used)}" /></div>
+    <div class="row-wrap">
+      <div class="field-row" style="flex-basis:70px;"><label>Die</label><input data-path="combat.hitDice.${i}.die" value="${esc(hd.die)}" /></div>
+      <div class="field-row" style="flex-basis:100px;"><label>Class</label><input data-path="combat.hitDice.${i}.class" value="${esc(hd.class)}" /></div>
+      <div class="field-row" style="flex-basis:70px;flex-grow:0;"><label>Used</label><input type="number" data-path="combat.hitDice.${i}.used" value="${esc(hd.used)}" /></div>
       <button class="remove-btn" data-action="remove-hitdie" data-index="${i}">Remove</button>
     </div>
   `).join("");

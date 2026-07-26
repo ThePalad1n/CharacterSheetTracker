@@ -47,6 +47,11 @@
 
 * { box-sizing: border-box; }
 
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
@@ -143,7 +148,7 @@ input, textarea, select, button {
 .tab-btn:hover { color: var(--ink); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-main { padding: 1.25rem; max-width: 980px; margin: 0 auto; }
+main { padding: 1.25rem; max-width: 980px; margin: 0 auto; min-width: 0; }
 
 .tab-panel { display: none; animation: fadeIn 0.15s ease-in; }
 .tab-panel.active { display: block; }
@@ -163,6 +168,7 @@ main { padding: 1.25rem; max-width: 980px; margin: 0 auto; }
   border-radius: 12px;
   padding: 1rem;
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 .card h3 {
   margin: 0 0 0.75rem;
@@ -244,8 +250,8 @@ main { padding: 1.25rem; max-width: 980px; margin: 0 auto; }
   cursor: pointer;
 }
 .acc-head:hover { background: rgba(138,44,44,0.05); }
-.acc-title { font-weight: 700; flex: 1; }
-.acc-sub { color: var(--ink-soft); font-size: 0.85rem; margin-right: 0.5rem; white-space: nowrap; }
+.acc-title { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-sub { color: var(--ink-soft); font-size: 0.85rem; margin-right: 0.5rem; white-space: nowrap; flex-shrink: 0; }
 .acc-caret { transition: transform 0.15s ease; color: var(--ink-soft); }
 .acc-item.open .acc-caret { transform: rotate(90deg); }
 .acc-body {
@@ -255,7 +261,7 @@ main { padding: 1.25rem; max-width: 980px; margin: 0 auto; }
 }
 .acc-item.open .acc-body { display: block; padding-top: 0.75rem; }
 
-.field-row { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.6rem; }
+.field-row { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.6rem; min-width: 0; }
 .field-row label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
 .field-row input, .field-row textarea {
   background: var(--bg);
@@ -263,9 +269,27 @@ main { padding: 1.25rem; max-width: 980px; margin: 0 auto; }
   border-radius: 6px;
   padding: 0.4rem 0.5rem;
   font-size: 0.9rem;
+  width: 100%;
+  min-width: 0;
 }
 .field-row textarea { min-height: 3rem; resize: vertical; }
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; min-width: 0; }
+.two-col > * { min-width: 0; }
+
+/* Rows that hold several fields side by side (class/level, hit dice) --
+   wrap instead of squeezing on narrow screens. */
+.row-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.row-wrap:last-of-type { border-bottom: none; }
+.row-wrap .field-row { flex: 1 1 100px; min-width: 90px; margin-bottom: 0; }
+.row-wrap .remove-btn { flex: 0 0 auto; }
 
 .remove-btn {
   background: none;
@@ -343,4 +367,10 @@ textarea.editable-area {
 @media (max-width: 640px) {
   .topbar { flex-direction: column; align-items: flex-start; }
   .tabs { top: 118px; }
+  main { padding: 1rem 0.75rem; }
+  .two-col { grid-template-columns: 1fr; }
+  .vitals { width: 100%; }
+  .vital-box { flex: 1 1 30%; }
+  .app-footer { padding: 0.5rem 0.75rem; }
+  .save-indicator { flex-basis: 100%; margin-left: 0; text-align: right; }
 }
