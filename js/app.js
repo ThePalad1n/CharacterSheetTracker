@@ -2,12 +2,19 @@
 
 const STORAGE_KEY = "dnd-character-sheet:joe";
 
+// Set when loadState() upgrades an older saved sheet, so init can write the
+// upgraded copy back to localStorage.
+let sheetWasMigrated = false;
 let state = loadState();
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const { sheet, changed } = migrateCharacter(JSON.parse(raw));
+      sheetWasMigrated = changed;
+      return sheet;
+    }
   } catch (e) {
     console.warn("Failed to load saved sheet, using default.", e);
   }
@@ -338,19 +345,50 @@ function renderInventory() {
   `;
 }
 
+function featureUsesLabel(uses) {
+  const max = Number(uses.max) || 0;
+  const expended = Number(uses.expended) || 0;
+  return `${Math.max(max - expended, 0)}/${max} left`;
+}
+
 function renderFeatures() {
-  const featuresHtml = renderAccordion("features", state.features, (item, i) => ({
-    title: item.name || "New feature",
-    sub: item.source || "",
-    body: `
+  const featuresHtml = renderAccordion("features", state.features, (item, i) => {
+    // Features with a `uses` block (Favored Foe and friends) get a per-rest
+    // counter; everything else gets a button to start tracking one.
+    const usesRow = item.uses ? `
+      <div class="list-row">
+        <span>Uses</span>
+        <span style="display:flex;gap:0.5rem;align-items:center;">
+          <label style="font-size:0.75rem;color:var(--ink-soft);">Expended</label>
+          <input type="number" style="width:3rem;" data-path="features.${i}.uses.expended" value="${esc(item.uses.expended)}" />
+          <span>/</span>
+          <input type="number" style="width:3rem;" data-path="features.${i}.uses.max" value="${esc(item.uses.max)}" />
+        </span>
+      </div>` : "";
+    const usesBtn = item.uses
+      ? `<button class="ghost-btn" data-action="untrack-uses" data-index="${i}">Stop tracking uses</button>`
+      : `<button class="ghost-btn" data-action="track-uses" data-index="${i}">Track limited uses</button>`;
+    const subParts = [esc(item.source || "")].filter(Boolean);
+    if (item.uses) {
+      subParts.push(`<span data-computed="feature-uses" data-computed-key="${i}">${esc(featureUsesLabel(item.uses))}</span>`);
+    }
+    return {
+      title: item.name || "New feature",
+      subHtml: subParts.join(" • "),
+      body: `
       <div class="two-col">
         <div class="field-row"><label>Name</label><input data-path="features.${i}.name" value="${esc(item.name)}" /></div>
         <div class="field-row"><label>Source</label><input data-path="features.${i}.source" value="${esc(item.source)}" /></div>
       </div>
       <div class="field-row"><label>Notes</label><textarea data-path="features.${i}.notes">${esc(item.notes)}</textarea></div>
-      <button class="remove-btn" data-action="remove-features" data-index="${i}">Remove feature</button>
+      ${usesRow}
+      <div class="btn-row">
+        ${usesBtn}
+        <button class="remove-btn" data-action="remove-features" data-index="${i}">Remove feature</button>
+      </div>
     `,
-  }));
+    };
+  });
 
   const prof = state.proficiencies;
   return `
@@ -420,13 +458,13 @@ function renderStringList(path, arr, keyName) {
 
 function renderAccordion(listPath, items, mapFn) {
   return items.map((item, i) => {
-    const { title, sub, body } = mapFn(item, i);
+    const { title, sub, subHtml, body } = mapFn(item, i);
     return `
     <div class="acc-item" data-acc-id="${listPath}-${i}">
       <div class="acc-head" data-action="toggle-acc" data-accid="${listPath}-${i}">
         <span class="acc-caret">▶</span>
         <span class="acc-title">${esc(title)}</span>
-        <span class="acc-sub">${esc(sub)}</span>
+        <span class="acc-sub">${subHtml != null ? subHtml : esc(sub)}</span>
       </div>
       <div class="acc-body">${body}</div>
     </div>`;
@@ -447,6 +485,19 @@ const PANELS = {
   background: renderBackground,
 };
 
+// Notes can run long (feature rules text especially), so grow the box to fit
+// instead of leaving people to scroll inside a three-line window. Hidden
+// elements measure as 0, so anything not on screen yet is sized when its tab or
+// accordion row opens.
+function autoSizeTextarea(ta) {
+  if (!ta.offsetParent) return;
+  ta.style.height = "auto";
+  ta.style.height = ta.scrollHeight + "px";
+}
+function autoSizeTextareasIn(root) {
+  if (root) root.querySelectorAll("textarea").forEach(autoSizeTextarea);
+}
+
 function renderPanel(name) {
   const panel = document.getElementById("panel-" + name);
   panel.innerHTML = PANELS[name]();
@@ -454,6 +505,7 @@ function renderPanel(name) {
   panel.querySelectorAll(".acc-item").forEach((el) => {
     if (openAccordions.has(el.dataset.accId)) el.classList.add("open");
   });
+  autoSizeTextareasIn(panel);
 }
 
 function renderAllPanels() {
@@ -497,6 +549,10 @@ function refreshComputed() {
     const sk = state.skills[key];
     elm.textContent = fmtMod(abilityMod(a[sk.ability]) + sk.prof * state.proficiencyBonus);
   });
+  document.querySelectorAll('[data-computed="feature-uses"]').forEach((elm) => {
+    const feature = state.features[Number(elm.dataset.computedKey)];
+    if (feature && feature.uses) elm.textContent = featureUsesLabel(feature.uses);
+  });
   const pp = document.querySelector('[data-computed="passive-perception"]');
   if (pp) pp.textContent = 10 + abilityMod(a.wis) + state.skills.perception.prof * state.proficiencyBonus;
   document.getElementById("initDisplay").textContent = fmtMod(abilityMod(a.dex));
@@ -518,6 +574,7 @@ document.addEventListener("input", (e) => {
   const target = e.target;
   if (!target.dataset || !target.dataset.path) return;
   setPath(state, target.dataset.path, parseInputValue(target));
+  if (target.tagName === "TEXTAREA") autoSizeTextarea(target);
   saveState();
   refreshComputed();
   if (target.dataset.path.startsWith("meta.") || target.dataset.path.startsWith("classes.") ||
@@ -574,7 +631,9 @@ document.addEventListener("click", (e) => {
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     tabBtn.classList.add("active");
-    document.getElementById("panel-" + tabBtn.dataset.tab).classList.add("active");
+    const panel = document.getElementById("panel-" + tabBtn.dataset.tab);
+    panel.classList.add("active");
+    autoSizeTextareasIn(panel);
     return;
   }
 
@@ -595,6 +654,7 @@ document.addEventListener("click", (e) => {
   if (action === "toggle-acc") {
     const item = actionEl.closest(".acc-item");
     item.classList.toggle("open");
+    autoSizeTextareasIn(item);
     if (item.classList.contains("open")) openAccordions.add(actionEl.dataset.accid);
     else openAccordions.delete(actionEl.dataset.accid);
     return;
@@ -624,6 +684,21 @@ document.addEventListener("click", (e) => {
     ds[kind] = ds[kind] === idx + 1 ? idx : idx + 1;
     saveState();
     renderPanel("combat");
+    return;
+  }
+
+  if (action === "track-uses") {
+    const feature = state.features[Number(actionEl.dataset.index)];
+    if (feature) feature.uses = { max: state.proficiencyBonus || 1, expended: 0 };
+    saveState();
+    renderPanel("features");
+    return;
+  }
+  if (action === "untrack-uses") {
+    const feature = state.features[Number(actionEl.dataset.index)];
+    if (feature) delete feature.uses;
+    saveState();
+    renderPanel("features");
     return;
   }
 
@@ -693,7 +768,7 @@ document.getElementById("importInput").addEventListener("change", (e) => {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
-      state = parsed;
+      state = migrateCharacter(parsed).sheet;
       saveState();
       renderAllPanels();
     } catch (err) {
@@ -721,3 +796,6 @@ Object.keys(PANELS).forEach((name, i) => {
 });
 
 renderAllPanels();
+
+// An upgraded sheet only lives in memory until something writes it back.
+if (sheetWasMigrated) saveState();

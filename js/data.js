@@ -1,7 +1,50 @@
 // Default seed data, transcribed from Joe's paper character sheet.
 // Everything here is editable in the app itself -- if something below
 // doesn't match the paper sheet, just click it and fix it.
+
+// Bump this whenever the sheet gains something a browser's already-saved copy
+// should pick up too (a level-up, a corrected proficiency), and add a matching
+// entry to MIGRATIONS at the bottom of this file. Without that, edits here only
+// show up for someone loading the sheet for the very first time, or for anyone
+// who hits "Reset to paper sheet" and throws away their own changes.
+const SHEET_VERSION = 3;
+
+// Rolled hit point maximum at character level 4 (Artificer 1 / Rogue 1 /
+// Fighter 1 / Ranger 1).
+const HP_MAX = 38;
+
+// Shared so the seed data and the level-up migration can't drift apart.
+const RANGER_1_FEATURES = [
+  {
+    name: "Favored Foe",
+    source: "Ranger 1",
+    uses: { max: 2, expended: 0 },
+    notes:
+      "Optional class feature — replaces Favored Enemy (no benefit from the replaced feature, " +
+      "and it doesn't qualify for anything requiring it).\n\n" +
+      "When you hit a creature with an attack roll, you can mark it as your favored enemy for " +
+      "1 minute or until you lose concentration (as if concentrating on a spell). The first time " +
+      "on each of your turns that you hit that creature and deal damage — including the hit that " +
+      "marks it — the damage increases by 1d4.\n\n" +
+      "Uses equal your proficiency bonus (currently 2); all expended uses return on a long rest. " +
+      "The bonus die grows to 1d6 at Ranger 6 and 1d8 at Ranger 14.",
+  },
+  {
+    name: "Deft Explorer",
+    source: "Ranger 1",
+    notes:
+      "Optional class feature — replaces Natural Explorer (no benefit from the replaced feature, " +
+      "and it doesn't qualify for anything requiring it).\n\n" +
+      "Canny (1st level): your proficiency bonus is doubled for any ability check using one chosen " +
+      "skill proficiency — Investigation. That is the same math as expertise, so Investigation shows " +
+      "a double-ringed dot in the Skills list (+5 right now: Int +1 and twice the +2 bonus).\n\n" +
+      "You also speak, read, and write two additional languages: Elvish and Dwarvish.\n\n" +
+      "Further benefits arrive at Ranger 6 (Roving) and Ranger 10 (Tireless).",
+  },
+];
+
 const DEFAULT_CHARACTER = {
+  version: SHEET_VERSION,
   meta: {
     name: "Joe",
     player: "Evan",
@@ -15,6 +58,7 @@ const DEFAULT_CHARACTER = {
     { name: "Artificer", level: 1 },
     { name: "Rogue", level: 1 },
     { name: "Fighter", level: 1 },
+    { name: "Ranger", level: 1 },
   ],
   proficiencyBonus: 2,
   inspiration: 0,
@@ -39,12 +83,12 @@ const DEFAULT_CHARACTER = {
     acrobatics: { ability: "dex", prof: 0 },
     animalHandling: { ability: "wis", prof: 0 },
     arcana: { ability: "int", prof: 0 },
-    athletics: { ability: "str", prof: 0 },
+    athletics: { ability: "str", prof: 1 }, // skill from the Ranger multiclass list
     deception: { ability: "cha", prof: 0 },
     history: { ability: "int", prof: 0 },
     insight: { ability: "wis", prof: 0 },
     intimidation: { ability: "cha", prof: 0 },
-    investigation: { ability: "int", prof: 0 },
+    investigation: { ability: "int", prof: 2 }, // proficient, doubled by Deft Explorer's Canny
     medicine: { ability: "wis", prof: 0 },
     nature: { ability: "int", prof: 0 },
     perception: { ability: "wis", prof: 0 },
@@ -59,11 +103,12 @@ const DEFAULT_CHARACTER = {
     armorClass: 12,
     initiative: 1,
     speed: 30,
-    hpMax: null,
-    hpCurrent: null,
+    hpMax: HP_MAX,
+    hpCurrent: HP_MAX,
     hpTemp: 0,
     hitDice: [
       { die: "1d10", class: "Fighter", used: 0 },
+      { die: "1d10", class: "Ranger", used: 0 },
       { die: "1d8", class: "Rogue", used: 0 },
       { die: "1d8", class: "Artificer", used: 0 },
     ],
@@ -121,7 +166,7 @@ const DEFAULT_CHARACTER = {
     armor: ["All Armor", "All Shields"],
     weapons: ["Simple Weapons", "Martial Weapons", "Firearms"],
     tools: ["Artisan's Tools", "Thieves' Tools"],
-    languages: ["Common"],
+    languages: ["Common", "Elvish", "Dwarvish"],
   },
   features: [
     {
@@ -159,6 +204,7 @@ const DEFAULT_CHARACTER = {
       source: "Artificer 1",
       notes: "Imbue a tiny object with a minor magical effect.",
     },
+    ...RANGER_1_FEATURES,
   ],
   personality: {
     traits: "",
@@ -172,4 +218,108 @@ const DEFAULT_CHARACTER = {
 // Deep clone helper so we never mutate the default template in place.
 function getDefaultCharacter() {
   return JSON.parse(JSON.stringify(DEFAULT_CHARACTER));
+}
+
+/* ---------------- Saved-sheet upgrades ---------------- */
+
+function cloneValue(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function numberOrNull(value) {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function sameText(a, b) {
+  return String(a == null ? "" : a).trim().toLowerCase() === String(b).trim().toLowerCase();
+}
+
+function hasNamedEntry(list, name) {
+  return Array.isArray(list) && list.some((entry) => sameText(entry && entry.name, name));
+}
+
+// Each migration brings a saved sheet up to `version`. They run in order, only
+// the ones newer than the sheet's own version, and each one has to be safe to
+// run against a sheet someone has already been editing by hand -- hence all the
+// "only if it isn't there already" checks.
+const MIGRATIONS = [
+  {
+    version: 2,
+    label: "Ranger 1: Favored Foe, Deft Explorer, skill fixes",
+    apply(sheet) {
+      // Skill fixes: Sleight of Hand and Investigation should have been
+      // proficient all along. Canny (Deft Explorer) then doubles the
+      // proficiency bonus for Investigation, which is expertise's math.
+      if (sheet.skills) {
+        if (sheet.skills.sleightOfHand && !sheet.skills.sleightOfHand.prof) {
+          sheet.skills.sleightOfHand.prof = 1;
+        }
+        if (sheet.skills.investigation) {
+          sheet.skills.investigation.prof = 2;
+        }
+      }
+
+      if (Array.isArray(sheet.classes) && !hasNamedEntry(sheet.classes, "Ranger")) {
+        sheet.classes.push({ name: "Ranger", level: 1 });
+      }
+
+      const hitDice = sheet.combat && sheet.combat.hitDice;
+      if (Array.isArray(hitDice) && !hitDice.some((hd) => sameText(hd && hd.class, "Ranger"))) {
+        hitDice.push({ die: "1d10", class: "Ranger", used: 0 });
+      }
+
+      const languages = sheet.proficiencies && sheet.proficiencies.languages;
+      if (Array.isArray(languages)) {
+        ["Elvish", "Dwarvish"].forEach((language) => {
+          if (!languages.some((known) => sameText(known, language))) languages.push(language);
+        });
+      }
+
+      if (Array.isArray(sheet.features)) {
+        RANGER_1_FEATURES.forEach((feature) => {
+          if (!hasNamedEntry(sheet.features, feature.name)) sheet.features.push(cloneValue(feature));
+        });
+      }
+    },
+  },
+  {
+    version: 3,
+    label: "Ranger 1 follow-ups: Athletics proficiency, rolled hit points",
+    apply(sheet) {
+      // Athletics is the one skill the Ranger multiclass grants.
+      if (sheet.skills && sheet.skills.athletics && !sheet.skills.athletics.prof) {
+        sheet.skills.athletics.prof = 1;
+      }
+
+      // Current HP moves with the maximum the way it does at a level-up, so a
+      // sheet that was sitting on damage stays that far down.
+      if (sheet.combat) {
+        const previousMax = numberOrNull(sheet.combat.hpMax);
+        const current = numberOrNull(sheet.combat.hpCurrent);
+        sheet.combat.hpMax = HP_MAX;
+        sheet.combat.hpCurrent =
+          previousMax != null && current != null ? current + (HP_MAX - previousMax) : HP_MAX;
+      }
+    },
+  },
+];
+
+// Returns the upgraded sheet plus whether anything actually changed, so the
+// caller can write it straight back to localStorage.
+function migrateCharacter(sheet) {
+  if (!sheet || typeof sheet !== "object") return { sheet: getDefaultCharacter(), changed: true };
+  const from = Number(sheet.version) || 1;
+  let changed = false;
+  MIGRATIONS.forEach((migration) => {
+    if (migration.version <= from) return;
+    migration.apply(sheet);
+    changed = true;
+  });
+  if (sheet.version !== SHEET_VERSION) {
+    sheet.version = SHEET_VERSION;
+    changed = true;
+  }
+  return { sheet, changed };
 }
