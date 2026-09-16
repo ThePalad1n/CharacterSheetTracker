@@ -354,3 +354,11 @@ textarea.editable-area:focus { outline: none; border-color: var(--red); }
   .app-footer { position: static; padding: 0.75rem; margin-top: 1rem; }
   .save-indicator { flex-basis: 100%; margin-left: 0; text-align: right; }
 }
+
+.btn-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
