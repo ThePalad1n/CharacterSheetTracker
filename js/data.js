@@ -7,7 +7,11 @@
 // entry to MIGRATIONS at the bottom of this file. Without that, edits here only
 // show up for someone loading the sheet for the very first time, or for anyone
 // who hits "Reset to paper sheet" and throws away their own changes.
-const SHEET_VERSION = 2;
+const SHEET_VERSION = 3;
+
+// Rolled hit point maximum at character level 4 (Artificer 1 / Rogue 1 /
+// Fighter 1 / Ranger 1).
+const HP_MAX = 38;
 
 // Shared so the seed data and the level-up migration can't drift apart.
 const RANGER_1_FEATURES = [
@@ -79,7 +83,7 @@ const DEFAULT_CHARACTER = {
     acrobatics: { ability: "dex", prof: 0 },
     animalHandling: { ability: "wis", prof: 0 },
     arcana: { ability: "int", prof: 0 },
-    athletics: { ability: "str", prof: 0 },
+    athletics: { ability: "str", prof: 1 }, // skill from the Ranger multiclass list
     deception: { ability: "cha", prof: 0 },
     history: { ability: "int", prof: 0 },
     insight: { ability: "wis", prof: 0 },
@@ -99,8 +103,8 @@ const DEFAULT_CHARACTER = {
     armorClass: 12,
     initiative: 1,
     speed: 30,
-    hpMax: null,
-    hpCurrent: null,
+    hpMax: HP_MAX,
+    hpCurrent: HP_MAX,
     hpTemp: 0,
     hitDice: [
       { die: "1d10", class: "Fighter", used: 0 },
@@ -222,6 +226,12 @@ function cloneValue(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function numberOrNull(value) {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 function sameText(a, b) {
   return String(a == null ? "" : a).trim().toLowerCase() === String(b).trim().toLowerCase();
 }
@@ -271,6 +281,26 @@ const MIGRATIONS = [
         RANGER_1_FEATURES.forEach((feature) => {
           if (!hasNamedEntry(sheet.features, feature.name)) sheet.features.push(cloneValue(feature));
         });
+      }
+    },
+  },
+  {
+    version: 3,
+    label: "Ranger 1 follow-ups: Athletics proficiency, rolled hit points",
+    apply(sheet) {
+      // Athletics is the one skill the Ranger multiclass grants.
+      if (sheet.skills && sheet.skills.athletics && !sheet.skills.athletics.prof) {
+        sheet.skills.athletics.prof = 1;
+      }
+
+      // Current HP moves with the maximum the way it does at a level-up, so a
+      // sheet that was sitting on damage stays that far down.
+      if (sheet.combat) {
+        const previousMax = numberOrNull(sheet.combat.hpMax);
+        const current = numberOrNull(sheet.combat.hpCurrent);
+        sheet.combat.hpMax = HP_MAX;
+        sheet.combat.hpCurrent =
+          previousMax != null && current != null ? current + (HP_MAX - previousMax) : HP_MAX;
       }
     },
   },

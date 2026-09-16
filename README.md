@@ -53,13 +53,13 @@ existing entry — running one twice has to be a no-op.
 ## Notes on the seed data
 
 The starting data in `js/data.js` was transcribed from a photo of the paper
-sheet. A few values (exact HP maximum, some attack bonuses/damage) were hard
-to read and were filled in as best guesses — double check those in the app
-and correct them if needed. The Paladin-related features and the Divine Smite
-spell are marked "planned" since those levels haven't been taken yet.
+sheet. A few values (some attack bonuses/damage) were hard to read and were
+filled in as best guesses — double check those in the app and correct them if
+needed. The Paladin-related features and the Divine Smite spell are marked
+"planned" since those levels haven't been taken yet.
 
-Joe is Artificer 1 / Rogue 1 / Fighter 1 / Ranger 1. The Ranger level takes the
-optional Tasha's features — Favored Foe and Deft Explorer, with Canny applied to
-Investigation — so Favored Enemy and Natural Explorer are deliberately absent.
-The HP maximum does not include the Ranger level's hit die yet; add whatever you
-roll for it.
+Joe is Artificer 1 / Rogue 1 / Fighter 1 / Ranger 1, with 38 hit points. The
+Ranger level takes the optional Tasha's features — Favored Foe and Deft
+Explorer, with Canny applied to Investigation — so Favored Enemy and Natural
+Explorer are deliberately absent. Athletics is the skill from the Ranger
+multiclass list.
