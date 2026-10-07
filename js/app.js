@@ -161,7 +161,7 @@ function renderOverview() {
 
       <div class="card" style="grid-column:1/-1;">
         <h3>Classes &amp; Levels</h3>
-        <div class="small-note">Add a row here once the Paladin levels actually happen — it'll flow into the header automatically.</div>
+        <div class="small-note">Add a row here when Joe takes a level in a new class — it'll flow into the header automatically.</div>
         ${classesRows}
         <button class="add-btn" data-action="add-class">+ Add class</button>
       </div>
