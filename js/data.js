@@ -7,18 +7,22 @@
 // entry to MIGRATIONS at the bottom of this file. Without that, edits here only
 // show up for someone loading the sheet for the very first time, or for anyone
 // who hits "Reset to paper sheet" and throws away their own changes.
-const SHEET_VERSION = 3;
+const SHEET_VERSION = 4;
 
-// Rolled hit point maximum at character level 4 (Artificer 1 / Rogue 1 /
-// Fighter 1 / Ranger 1).
-const HP_MAX = 38;
+// Hit point maximum at character level 5 (Artificer 1 / Rogue 1 / Fighter 1 /
+// Ranger 1 / Paladin 1): 38 rolled through Ranger 1, plus the Paladin d10's
+// fixed average of 6 and +2 Con.
+const HP_MAX = 46;
+
+// Character level 5 moves the proficiency bonus from +2 to +3.
+const PROFICIENCY_BONUS = 3;
 
 // Shared so the seed data and the level-up migration can't drift apart.
 const RANGER_1_FEATURES = [
   {
     name: "Favored Foe",
     source: "Ranger 1",
-    uses: { max: 2, expended: 0 },
+    uses: { max: PROFICIENCY_BONUS, expended: 0 },
     notes:
       "Optional class feature — replaces Favored Enemy (no benefit from the replaced feature, " +
       "and it doesn't qualify for anything requiring it).\n\n" +
@@ -26,7 +30,7 @@ const RANGER_1_FEATURES = [
       "1 minute or until you lose concentration (as if concentrating on a spell). The first time " +
       "on each of your turns that you hit that creature and deal damage — including the hit that " +
       "marks it — the damage increases by 1d4.\n\n" +
-      "Uses equal your proficiency bonus (currently 2); all expended uses return on a long rest. " +
+      "Uses equal your proficiency bonus (currently 3); all expended uses return on a long rest. " +
       "The bonus die grows to 1d6 at Ranger 6 and 1d8 at Ranger 14.",
   },
   {
@@ -37,11 +41,51 @@ const RANGER_1_FEATURES = [
       "and it doesn't qualify for anything requiring it).\n\n" +
       "Canny (1st level): your proficiency bonus is doubled for any ability check using one chosen " +
       "skill proficiency — Investigation. That is the same math as expertise, so Investigation shows " +
-      "a double-ringed dot in the Skills list (+5 right now: Int +1 and twice the +2 bonus).\n\n" +
+      "a double-ringed dot in the Skills list (+7 right now: Int +1 and twice the +3 bonus).\n\n" +
       "You also speak, read, and write two additional languages: Elvish and Dwarvish.\n\n" +
       "Further benefits arrive at Ranger 6 (Roving) and Ranger 10 (Tireless).",
   },
 ];
+
+const PALADIN_1_FEATURES = [
+  {
+    name: "Divine Sense",
+    source: "Paladin 1",
+    uses: { max: 2, expended: 0 },
+    notes:
+      "Action: until the end of your next turn, you know the location of any celestial, fiend, or " +
+      "undead within 60 feet that isn't behind total cover, and its type (but not its identity). " +
+      "You also sense any place or object within 60 feet that has been consecrated or desecrated.\n\n" +
+      "Uses equal 1 + your Charisma modifier (currently 2); all expended uses return on a long rest.",
+  },
+  {
+    name: "Lay on Hands",
+    source: "Paladin 1",
+    uses: { max: 5, expended: 0 },
+    notes:
+      "A pool of healing equal to 5 × your Paladin level (currently 5 hit points), refilled on a " +
+      "long rest. The counter above tracks hit points spent from the pool.\n\n" +
+      "Action: touch a creature and restore any number of hit points from the pool. Or spend 5 " +
+      "points to cure it of one disease or neutralize one poison (several at once cost 5 each). " +
+      "No effect on undead or constructs.",
+  },
+];
+
+// Attack bonuses as they were at proficiency +2, keyed by attack name. The
+// level 5 migration only bumps an attack that still carries this value, so a
+// bonus somebody corrected by hand is left alone.
+const ATTACK_BONUSES_BEFORE_LEVEL_5 = {
+  "Short Sword A": "+5",
+  "Short Sword B": "+5",
+  "Scythe (reflavored)": "+5",
+  "Wrench (club)": "+4",
+  "Long Dagger": "+3",
+};
+
+const DIVINE_SMITE_NOTES_BEFORE_LEVEL_5 = "Planned once Paladin levels are taken — not usable yet";
+const DIVINE_SMITE_NOTES = "Planned — Divine Smite arrives at Paladin 2, not usable yet";
+const SACRED_WEAPON_NOTES_BEFORE_LEVEL_5 = "Channel Divinity. Not active until Paladin levels are taken.";
+const SACRED_WEAPON_NOTES = "Channel Divinity. Not active until Paladin 3, when the Oath of Devotion is sworn.";
 
 const DEFAULT_CHARACTER = {
   version: SHEET_VERSION,
@@ -59,8 +103,9 @@ const DEFAULT_CHARACTER = {
     { name: "Rogue", level: 1 },
     { name: "Fighter", level: 1 },
     { name: "Ranger", level: 1 },
+    { name: "Paladin", level: 1 },
   ],
-  proficiencyBonus: 2,
+  proficiencyBonus: PROFICIENCY_BONUS,
   inspiration: 0,
   abilities: {
     str: 14,
@@ -111,15 +156,16 @@ const DEFAULT_CHARACTER = {
       { die: "1d10", class: "Ranger", used: 0 },
       { die: "1d8", class: "Rogue", used: 0 },
       { die: "1d8", class: "Artificer", used: 0 },
+      { die: "1d10", class: "Paladin", used: 0 },
     ],
     deathSaves: { successes: 0, failures: 0 },
   },
   attacks: [
-    { name: "Short Sword A", atkBonus: "+5", damage: "1d6+2 slashing", notes: "" },
-    { name: "Short Sword B", atkBonus: "+5", damage: "1d6+2 slashing", notes: "two-weapon fighting off-hand" },
-    { name: "Scythe (reflavored)", atkBonus: "+5", damage: "2d4+2 slashing", notes: "" },
-    { name: "Wrench (club)", atkBonus: "+4", damage: "1d4+2 bludgeoning", notes: "" },
-    { name: "Long Dagger", atkBonus: "+3", damage: "1d4+1 piercing", notes: "" },
+    { name: "Short Sword A", atkBonus: "+6", damage: "1d6+2 slashing", notes: "" },
+    { name: "Short Sword B", atkBonus: "+6", damage: "1d6+2 slashing", notes: "two-weapon fighting off-hand" },
+    { name: "Scythe (reflavored)", atkBonus: "+6", damage: "2d4+2 slashing", notes: "" },
+    { name: "Wrench (club)", atkBonus: "+5", damage: "1d4+2 bludgeoning", notes: "" },
+    { name: "Long Dagger", atkBonus: "+4", damage: "1d4+1 piercing", notes: "" },
   ],
   spellcasting: {
     ability: "int",
@@ -131,7 +177,7 @@ const DEFAULT_CHARACTER = {
     spells: [
       { name: "Cure Wounds", level: 1, prepared: true, notes: "1d8+3 healing" },
       { name: "Purify Food and Drink", level: 1, prepared: true, notes: "" },
-      { name: "Divine Smite", level: 1, prepared: true, notes: "Planned once Paladin levels are taken — not usable yet" },
+      { name: "Divine Smite", level: 1, prepared: true, notes: DIVINE_SMITE_NOTES },
       { name: "Heroism", level: 1, prepared: false, notes: "" },
     ],
   },
@@ -169,20 +215,11 @@ const DEFAULT_CHARACTER = {
     languages: ["Common", "Elvish", "Dwarvish"],
   },
   features: [
-    {
-      name: "Divine Sense",
-      source: "Paladin (planned)",
-      notes: "Detect celestials/fiends/undead within 60 ft. Not active until Paladin levels are taken.",
-    },
-    {
-      name: "Lay on Hands",
-      source: "Paladin (planned)",
-      notes: "Healing pool. Not active until Paladin levels are taken.",
-    },
+    ...PALADIN_1_FEATURES,
     {
       name: "Sacred Weapon",
       source: "Oath of Devotion (planned)",
-      notes: "Channel Divinity. Not active until Paladin levels are taken.",
+      notes: SACRED_WEAPON_NOTES,
     },
     {
       name: "Second Wind",
@@ -295,6 +332,79 @@ const MIGRATIONS = [
 
       // Current HP moves with the maximum the way it does at a level-up, so a
       // sheet that was sitting on damage stays that far down.
+      if (sheet.combat) {
+        const previousMax = numberOrNull(sheet.combat.hpMax);
+        const current = numberOrNull(sheet.combat.hpCurrent);
+        sheet.combat.hpMax = 38;
+        sheet.combat.hpCurrent =
+          previousMax != null && current != null ? current + (38 - previousMax) : 38;
+      }
+    },
+  },
+  {
+    version: 4,
+    label: "Paladin 1: Divine Sense, Lay on Hands, proficiency +3",
+    apply(sheet) {
+      if (Array.isArray(sheet.classes) && !hasNamedEntry(sheet.classes, "Paladin")) {
+        sheet.classes.push({ name: "Paladin", level: 1 });
+      }
+
+      const hitDice = sheet.combat && sheet.combat.hitDice;
+      if (Array.isArray(hitDice) && !hitDice.some((hd) => sameText(hd && hd.class, "Paladin"))) {
+        hitDice.push({ die: "1d10", class: "Paladin", used: 0 });
+      }
+
+      // Character level 5. Everything computed from the bonus (saves, skills,
+      // passive Perception) follows on its own; the stored attack bonuses don't.
+      if ((numberOrNull(sheet.proficiencyBonus) || 0) < PROFICIENCY_BONUS) {
+        sheet.proficiencyBonus = PROFICIENCY_BONUS;
+        if (Array.isArray(sheet.attacks)) {
+          sheet.attacks.forEach((attack) => {
+            const before = attack && ATTACK_BONUSES_BEFORE_LEVEL_5[attack.name];
+            const bonus = before != null && String(attack.atkBonus).trim() === before ? numberOrNull(before) : null;
+            if (bonus != null) attack.atkBonus = `+${bonus + 1}`;
+          });
+        }
+      }
+
+      if (Array.isArray(sheet.features)) {
+        // Favored Foe's uses track the proficiency bonus.
+        sheet.features.forEach((feature) => {
+          if (!feature) return;
+          if (sameText(feature.name, "Favored Foe") && feature.uses && Number(feature.uses.max) === 2) {
+            feature.uses.max = PROFICIENCY_BONUS;
+          }
+          if (typeof feature.notes === "string") {
+            feature.notes = feature.notes
+              .replace("(currently 2); all", "(currently 3); all")
+              .replace("(+5 right now: Int +1 and twice the +2 bonus)", "(+7 right now: Int +1 and twice the +3 bonus)");
+          }
+          if (sameText(feature.name, "Sacred Weapon") && feature.notes === SACRED_WEAPON_NOTES_BEFORE_LEVEL_5) {
+            feature.notes = SACRED_WEAPON_NOTES;
+          }
+        });
+
+        // The planned Paladin placeholders become the real features; anything
+        // already edited away from "planned" is kept as it is.
+        PALADIN_1_FEATURES.forEach((feature) => {
+          const index = sheet.features.findIndex((entry) => sameText(entry && entry.name, feature.name));
+          if (index === -1) {
+            sheet.features.push(cloneValue(feature));
+          } else if (sameText(sheet.features[index].source, "Paladin (planned)")) {
+            sheet.features[index] = cloneValue(feature);
+          }
+        });
+      }
+
+      const spells = sheet.spellcasting && sheet.spellcasting.spells;
+      if (Array.isArray(spells)) {
+        spells.forEach((spell) => {
+          if (spell && sameText(spell.name, "Divine Smite") && spell.notes === DIVINE_SMITE_NOTES_BEFORE_LEVEL_5) {
+            spell.notes = DIVINE_SMITE_NOTES;
+          }
+        });
+      }
+
       if (sheet.combat) {
         const previousMax = numberOrNull(sheet.combat.hpMax);
         const current = numberOrNull(sheet.combat.hpCurrent);

@@ -55,10 +55,13 @@ existing entry — running one twice has to be a no-op.
 The starting data in `js/data.js` was transcribed from a photo of the paper
 sheet. A few values (some attack bonuses/damage) were hard to read and were
 filled in as best guesses — double check those in the app and correct them if
-needed. The Paladin-related features and the Divine Smite spell are marked
-"planned" since those levels haven't been taken yet.
+needed. Divine Smite (Paladin 2) and Sacred Weapon (Oath of Devotion, Paladin 3)
+are still marked "planned" since those levels haven't been taken yet.
 
-Joe is Artificer 1 / Rogue 1 / Fighter 1 / Ranger 1, with 38 hit points. The
+Joe is Artificer 1 / Rogue 1 / Fighter 1 / Ranger 1 / Paladin 1 — character
+level 5, so the proficiency bonus is +3 — with 46 hit points (the Paladin level
+took the d10's average). Paladin 1 brings Divine Sense (2 uses per long rest)
+and Lay on Hands (a 5 hit point pool), both tracked with use counters. The
 Ranger level takes the optional Tasha's features — Favored Foe and Deft
 Explorer, with Canny applied to Investigation — so Favored Enemy and Natural
 Explorer are deliberately absent. Athletics is the skill from the Ranger
